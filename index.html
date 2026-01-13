@@ -5,150 +5,40 @@
 <title>Mandya Smart Transport</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Leaflet (FREE MAP) -->
-<link rel="stylesheet"
- href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
-body{margin:0;font-family:Segoe UI;background:#0b1d2a;color:#fff}
-header{padding:16px;text-align:center;background:#0008;position:relative}
-.lang{position:absolute;right:10px;top:10px}
-button{padding:6px 12px;border:none;border-radius:10px;cursor:pointer}
-#map{height:50vh;margin:10px;border-radius:14px}
-.container{padding:10px}
-input{width:100%;padding:12px;border-radius:20px;border:none;margin:10px 0}
-.card{background:#ffffff1a;padding:14px;border-radius:16px;margin-bottom:10px}
-.live{color:#00ff9c;font-weight:bold}
+  body { margin:0; font-family:"Segoe UI", sans-serif; background: linear-gradient(180deg, #e0f7fa, #ffffff);}
+  header { background:#006064; color:#fff; text-align:center; font-size:24px; font-weight:bold; padding:16px; box-shadow:0 4px 8px rgba(0,0,0,0.2);}
+  .container { padding:10px; text-align:center;}
+  input[type="text"] { width:80%; padding:12px; font-size:16px; border-radius:25px; border:1px solid #006064; box-shadow:0 2px 4px rgba(0,0,0,0.1);}
+  #map { height:75vh; width:95%; margin:10px auto; border-radius:15px; box-shadow:0 4px 8px rgba(0,0,0,0.3);}
+  #infoPanel { text-align:center; padding:10px; font-size:14px; color:#004d40; }
 </style>
+</head>
+
+<body>
+<header>Mandya Smart Transport System</header>
+
+<div class="container">
+  <input id="searchBox" type="text" placeholder="Search village or bus number">
+</div>
+
+<div id="map"></div>
+
+<div id="infoPanel">Live bus tracking | Smart routes | Kannada support | All villages</div>
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-</head>
-
-<body>
-
-<header>
-  <h2 id="title">Mandya Smart Transport System</h2>
-  <p id="subtitle">Live Bus Tracking • All Villages</p>
-  <div class="lang">
-    <button onclick="setLang('en')">EN</button>
-    <button onclick="setLang('kn')">KN</button>
-  </div>
-</header>
-
-<div id="map"></div>
-
-<div class="container">
-  <input id="search" placeholder="Search village / stop">
-  <div id="list"></div>
-</div>
+<!-- Firebase SDK optional for real-time -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
 
 <script>
-/* ================= LANGUAGE ================= */
-const text={
- en:{
-  title:"Mandya Smart Transport System",
-  sub:"Live Bus Tracking • All Villages",
-  search:"Search village / stop",
-  from:"From Mandya Bus Stand",
-  eta:"ETA"
- },
- kn:{
-  title:"ಮಂಡ್ಯ ಸ್ಮಾರ್ಟ್ ಸಾರಿಗೆ ವ್ಯವಸ್ಥೆ",
-  sub:"ಲೈವ್ ಬಸ್ ಟ್ರ್ಯಾಕಿಂಗ್ • ಎಲ್ಲಾ ಗ್ರಾಮಗಳು",
-  search:"ಗ್ರಾಮ / ನಿಲ್ದಾಣ ಹುಡುಕಿ",
-  from:"ಮಂಡ್ಯ ಬಸ್ ನಿಲ್ದಾಣದಿಂದ",
-  eta:"ಬರುವ ಸಮಯ"
- }
-};
-let lang="en";
-
-function setLang(l){
- lang=l;
- title.innerText=text[l].title;
- subtitle.innerText=text[l].sub;
- search.placeholder=text[l].search;
- render(filteredVillages());
-}
-
-/* ================= MAP (FREE) ================= */
-const map = L.map('map').setView([12.523,76.895],10);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
- attribution:'© OpenStreetMap'
-}).addTo(map);
-
-/* ================= FIREBASE ================= */
-firebase.initializeApp({
- apiKey: "YOUR_FIREBASE_API_KEY",
- authDomain: "YOUR_PROJECT.firebaseapp.com",
- projectId: "YOUR_PROJECT_ID"
-});
-const db = firebase.firestore();
-
-/* ================= VILLAGES ================= */
-const villages=[
- {name:"Mandya",kn:"ಮಂಡ್ಯ",km:0},
- {name:"Basaralu",kn:"ಬಸರಾಳು",km:6},
- {name:"Keragodu",kn:"ಕೆರಗೋಡು",km:8},
- {name:"Kyathanahalli",kn:"ಕ್ಯಾತನಹಳ್ಳಿ",km:10},
- {name:"Guthalu",kn:"ಗುತ್ಥಲು",km:12},
- {name:"Chinakurali",kn:"ಚಿನಕುರಳಿ",km:16},
- {name:"Pandavapura",kn:"ಪಾಂಡವಪುರ",km:25},
- {name:"Malavalli",kn:"ಮಳವಳ್ಳಿ",km:35}
-];
-
-/* ================= ETA ================= */
-function eta(km){
- return Math.max(3,Math.round((km/30)*60));
-}
-
-/* ================= UI ================= */
-const listDiv=document.getElementById("list");
-
-function filteredVillages(){
- const v=search.value?.toLowerCase()||"";
- return villages.filter(x =>
-  x.name.toLowerCase().includes(v) ||
-  x.kn.includes(v)
- );
-}
-
-function render(list){
- listDiv.innerHTML="";
- list.forEach(v=>{
-  listDiv.innerHTML+=`
-   <div class="card">
-    <b>${lang==="en"?v.name:v.kn}</b>
-    <p>${text[lang].from}</p>
-    <p>${text[lang].eta}: ${eta(v.km)} min</p>
-    <p class="live">● LIVE TRACKING</p>
-   </div>`;
- });
-}
-render(villages);
-search.onkeyup=()=>render(filteredVillages());
-
-/* ================= LIVE BUS TRACKING ================= */
-const markers={};
-
-db.collection("buses").onSnapshot(snapshot=>{
- snapshot.forEach(doc=>{
-  const b=doc.data();
-  const pos=[b.lat,b.lng];
-  if(markers[doc.id]){
-   markers[doc.id].setLatLng(pos);
-  }else{
-   markers[doc.id]=L.marker(pos)
-     .addTo(map)
-     .bindPopup("Bus: "+b.busNo);
-  }
- });
-});
-</script>
-
-</body>
-</html>
+  // ------------------------
+  // Firebase (optional)
+  // ------------------------
+  const firebaseConfig = {
+    apiKey: "
