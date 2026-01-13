@@ -1,96 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Mandya Smart Transport</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>Mandya Smart Transport</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<!-- Leaflet (FREE MAP) -->
+<link rel="stylesheet"
+ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: "Segoe UI", sans-serif;
-    }
+<style>
+body{margin:0;font-family:Segoe UI;background:#0b1d2a;color:#fff}
+header{padding:16px;text-align:center;background:#0008;position:relative}
+.lang{position:absolute;right:10px;top:10px}
+button{padding:6px 12px;border:none;border-radius:10px;cursor:pointer}
+#map{height:50vh;margin:10px;border-radius:14px}
+.container{padding:10px}
+input{width:100%;padding:12px;border-radius:20px;border:none;margin:10px 0}
+.card{background:#ffffff1a;padding:14px;border-radius:16px;margin-bottom:10px}
+.live{color:#00ff9c;font-weight:bold}
+</style>
 
-    header {
-      padding: 16px;
-      text-align: center;
-      background-color: #0088cc;
-      color: white;
-      font-size: 20px;
-      font-weight: bold;
-    }
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    .container {
-      padding: 10px;
-      text-align: center;
-    }
-
-    input[type="text"] {
-      width: 80%;
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-    }
-
-    #map {
-      height: 80vh; /* map takes most of screen height */
-      margin: 10px;
-      border-radius: 10px;
-    }
-  </style>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 
 <body>
-  <header>Mandya Smart Transport System</header>
 
-  <div class="container">
-    <input type="text" placeholder="Search village or bus stop">
+<header>
+  <h2 id="title">Mandya Smart Transport System</h2>
+  <p id="subtitle">Live Bus Tracking • All Villages</p>
+  <div class="lang">
+    <button onclick="setLang('en')">EN</button>
+    <button onclick="setLang('kn')">KN</button>
   </div>
+</header>
 
-  <!-- Map container -->
-  <div id="map"></div>
+<div id="map"></div>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<div class="container">
+  <input id="search" placeholder="Search village / stop">
+  <div id="list"></div>
+</div>
 
-  <!-- JS for map, bus marker, and moving simulation -->
-  <script>
-    // Initialize map (Mandya coordinates)
-    var map = L.map('map').setView([12.5242, 76.8958], 12);
+<script>
+/* ================= LANGUAGE ================= */
+const text={
+ en:{
+  title:"Mandya Smart Transport System",
+  sub:"Live Bus Tracking • All Villages",
+  search:"Search village / stop",
+  from:"From Mandya Bus Stand",
+  eta:"ETA"
+ },
+ kn:{
+  title:"ಮಂಡ್ಯ ಸ್ಮಾರ್ಟ್ ಸಾರಿಗೆ ವ್ಯವಸ್ಥೆ",
+  sub:"ಲೈವ್ ಬಸ್ ಟ್ರ್ಯಾಕಿಂಗ್ • ಎಲ್ಲಾ ಗ್ರಾಮಗಳು",
+  search:"ಗ್ರಾಮ / ನಿಲ್ದಾಣ ಹುಡುಕಿ",
+  from:"ಮಂಡ್ಯ ಬಸ್ ನಿಲ್ದಾಣದಿಂದ",
+  eta:"ಬರುವ ಸಮಯ"
+ }
+};
+let lang="en";
 
-    // Map tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+function setLang(l){
+ lang=l;
+ title.innerText=text[l].title;
+ subtitle.innerText=text[l].sub;
+ search.placeholder=text[l].search;
+ render(filteredVillages());
+}
 
-    // Bus icon
-    var busIcon = L.icon({
-      iconUrl: 'https://cdn-icons-png.flaticon.com/512/61/61231.png',
-      iconSize: [35, 35]
-    });
+/* ================= MAP (FREE) ================= */
+const map = L.map('map').setView([12.523,76.895],10);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+ attribution:'© OpenStreetMap'
+}).addTo(map);
 
-    // Bus marker at starting position
-    var busMarker = L.marker([12.5242, 76.8958], { icon: busIcon }).addTo(map)
-      .bindPopup("Bus KA-11-A-1234");
+/* ================= FIREBASE ================= */
+firebase.initializeApp({
+ apiKey: "YOUR_FIREBASE_API_KEY",
+ authDomain: "YOUR_PROJECT.firebaseapp.com",
+ projectId: "YOUR_PROJECT_ID"
+});
+const db = firebase.firestore();
 
-    // Sample route coordinates (simulate moving bus)
-    var route = [
-      [12.5242, 76.8958],
-      [12.5300, 76.9000],
-      [12.5360, 76.9050],
-      [12.5400, 76.9100],
-      [12.5440, 76.9150]
-    ];
+/* ================= VILLAGES ================= */
+const villages=[
+ {name:"Mandya",kn:"ಮಂಡ್ಯ",km:0},
+ {name:"Basaralu",kn:"ಬಸರಾಳು",km:6},
+ {name:"Keragodu",kn:"ಕೆರಗೋಡು",km:8},
+ {name:"Kyathanahalli",kn:"ಕ್ಯಾತನಹಳ್ಳಿ",km:10},
+ {name:"Guthalu",kn:"ಗುತ್ಥಲು",km:12},
+ {name:"Chinakurali",kn:"ಚಿನಕುರಳಿ",km:16},
+ {name:"Pandavapura",kn:"ಪಾಂಡವಪುರ",km:25},
+ {name:"Malavalli",kn:"ಮಳವಳ್ಳಿ",km:35}
+];
 
-    var i = 0;
-    setInterval(() => {
-      i = (i + 1) % route.length;
-      busMarker.setLatLng(route[i]);
-    }, 3000); // move every 3 seconds
-  </script>
+/* ================= ETA ================= */
+function eta(km){
+ return Math.max(3,Math.round((km/30)*60));
+}
+
+/* ================= UI ================= */
+const listDiv=document.getElementById("list");
+
+function filteredVillages(){
+ const v=search.value?.toLowerCase()||"";
+ return villages.filter(x =>
+  x.name.toLowerCase().includes(v) ||
+  x.kn.includes(v)
+ );
+}
+
+function render(list){
+ listDiv.innerHTML="";
+ list.forEach(v=>{
+  listDiv.innerHTML+=`
+   <div class="card">
+    <b>${lang==="en"?v.name:v.kn}</b>
+    <p>${text[lang].from}</p>
+    <p>${text[lang].eta}: ${eta(v.km)} min</p>
+    <p class="live">● LIVE TRACKING</p>
+   </div>`;
+ });
+}
+render(villages);
+search.onkeyup=()=>render(filteredVillages());
+
+/* ================= LIVE BUS TRACKING ================= */
+const markers={};
+
+db.collection("buses").onSnapshot(snapshot=>{
+ snapshot.forEach(doc=>{
+  const b=doc.data();
+  const pos=[b.lat,b.lng];
+  if(markers[doc.id]){
+   markers[doc.id].setLatLng(pos);
+  }else{
+   markers[doc.id]=L.marker(pos)
+     .addTo(map)
+     .bindPopup("Bus: "+b.busNo);
+  }
+ });
+});
+</script>
+
 </body>
 </html>
