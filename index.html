@@ -14,7 +14,7 @@ body{margin:0;font-family:Segoe UI;background:#0b1d2a;color:#fff}
 header{padding:16px;text-align:center;background:#0008;position:relative}
 .lang{position:absolute;right:10px;top:10px}
 button{padding:6px 12px;border:none;border-radius:10px;cursor:pointer}
-#map{height:50vh;margin:10px;border-radius:14px}
+#map{height:65vh;width:100%;margin:10px;border-radius:14px}
 .container{padding:10px}
 input{width:100%;padding:12px;border-radius:20px;border:none;margin:10px 0}
 .card{background:#ffffff1a;padding:14px;border-radius:16px;margin-bottom:10px}
@@ -76,7 +76,8 @@ function setLang(l){
 }
 
 /* ================= MAP (FREE) ================= */
-const map = L.map('map').setView([12.523,76.895],10);
+ const map = L.map('map').setView([12.54, 76.90], 14);
+
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
  attribution:'© OpenStreetMap'
 }).addTo(map);
@@ -146,9 +147,45 @@ db.collection("buses").onSnapshot(snapshot=>{
      .addTo(map)
      .bindPopup("Bus: "+b.busNo);
   }
+  map.setView(pos, 15);
+
  });
 });
+<script>
+  // Initialize map centered on Mandya
+  var map = L.map('map').setView([12.5242, 76.8958], 12);
+
+  // Free OpenStreetMap tiles (NO payment needed)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Bus icon
+  var busIcon = L.icon({
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/61/61231.png',
+    iconSize: [35, 35]
+  });
+
+  // Bus marker (Mandya Bus Stand)
+  var busMarker = L.marker([12.5242, 76.8958], {
+    icon: busIcon
+  }).addTo(map).bindPopup("Bus KA-11-A-1234");
+
+  // Simulated live movement
+  var route = [
+    [12.5242, 76.8958],
+    [12.5342, 76.9058],
+    [12.5442, 76.9158],
+    [12.5542, 76.9258]
+  ];
+
+  var i = 0;
+  setInterval(() => {
+    i = (i + 1) % route.length;
+    busMarker.setLatLng(route[i]);
+  }, 3000);
 </script>
+
 
 </body>
 </html>
